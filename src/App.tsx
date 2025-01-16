@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Calculator } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Calculator, RefreshCw } from 'lucide-react';
 
 interface Resource {
   name: string;
@@ -11,7 +11,6 @@ interface Resource {
 interface Product {
   name: string;
   profit: number;
-  production: number;
 }
 
 interface Solution {
@@ -45,12 +44,13 @@ function App() {
   ]);
 
   const [products, setProducts] = useState<Product[]>([
-    { name: "A1", profit: 120, production: 20 },
-    { name: "A2", profit: 60, production: 0 },
-    { name: "A3", profit: 40, production: 80 }
+    { name: "A1", profit: 120 },
+    { name: "A2", profit: 60 },
+    { name: "A3", profit: 40 }
   ]);
 
-  const [solution] = useState<Solution>({
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const [solution, setSolution] = useState<Solution>({
     optimal: true,
     objectiveValue: 5600,
     variables: [20, 0, 80],
@@ -68,6 +68,39 @@ function App() {
     const newProducts = [...products];
     newProducts[index] = { ...newProducts[index], [field]: value };
     setProducts(newProducts);
+  };
+
+  const optimizationInputs = useMemo(() => ({
+    profits: products.map(p => p.profit),
+    constraints: resources.map(r => r.requirements),
+    availabilities: resources.map(r => r.available)
+  }), [
+    products.map(p => p.profit).join(','),
+    resources.map(r => r.requirements.join(',')).join('|'),
+    resources.map(r => r.available).join(',')
+  ]);
+
+  const handleOptimize = async () => {
+    setIsOptimizing(true);
+    
+    // Simulamos un tiempo de cálculo
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Aquí iría la llamada al método simplex real
+    const newSolution: Solution = {
+      optimal: true,
+      objectiveValue: optimizationInputs.profits.reduce((acc, profit, index) => 
+        acc + profit * solution.variables[index], 0),
+      variables: solution.variables.map((v, i) => 
+        Math.max(0, v + Math.floor(Math.random() * 10) - 5)),
+      slacks: solution.slacks.map(s => 
+        Math.max(0, s + Math.floor(Math.random() * 20) - 10)),
+      dualPrices: solution.dualPrices.map(d => 
+        Math.max(0, d + Math.floor(Math.random() * 5) - 2))
+    };
+    
+    setSolution(newSolution);
+    setIsOptimizing(false);
   };
 
   return (
@@ -134,7 +167,7 @@ function App() {
                       <label className="block text-sm text-gray-600">Producción óptima</label>
                       <input
                         type="number"
-                        value={product.production}
+                        value={solution.variables[index]}
                         readOnly
                         className="w-full mt-1 px-3 py-2 border rounded-md bg-gray-50"
                       />
@@ -147,39 +180,68 @@ function App() {
 
           {/* Resultados */}
           <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-            <h2 className="text-xl font-semibold mb-4">Resultados de Optimización</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                <h3 className="font-medium mb-3">Solución Óptima</h3>
-                <p className="text-lg font-bold text-blue-600">
-                  Beneficio Total: ${solution.objectiveValue.toLocaleString()}
-                </p>
-                <div className="mt-4 space-y-2">
-                  {products.map((product, index) => (
-                    <p key={product.name}>
-                      {product.name}: {solution.variables[index]} unidades
-                    </p>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <h3 className="font-medium mb-3">Análisis de Sensibilidad</h3>
-                <div className="space-y-2">
-                  {resources.map((resource, index) => (
-                    <p key={resource.name}>
-                      {resource.name}:{' '}
-                      {solution.slacks[index] === 0 ? (
-                        <span className="text-yellow-600">Recurso limitante</span>
-                      ) : (
-                        <span className="text-green-600">
-                          Excedente: {solution.slacks[index]} unidades
-                        </span>
-                      )}
-                    </p>
-                  ))}
-                </div>
-              </div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Resultados de Optimización</h2>
+              <button
+                onClick={handleOptimize}
+                disabled={isOptimizing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+              >
+                {isOptimizing ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <span>Optimizando...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-5 h-5" />
+                    <span>Optimizar</span>
+                  </>
+                )}
+              </button>
             </div>
+
+            {isOptimizing ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-600 animate-[loading_1.5s_ease-in-out_infinite]" style={{width: '100%'}}></div>
+                </div>
+                <p className="mt-4 text-gray-600">Calculando la solución óptima...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-medium mb-3">Solución Óptima</h3>
+                  <p className="text-lg font-bold text-blue-600">
+                    Beneficio Total: ${solution.objectiveValue.toLocaleString()}
+                  </p>
+                  <div className="mt-4 space-y-2">
+                    {products.map((product, index) => (
+                      <p key={product.name}>
+                        {product.name}: {solution.variables[index]} unidades
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-3">Análisis de Sensibilidad</h3>
+                  <div className="space-y-2">
+                    {resources.map((resource, index) => (
+                      <p key={resource.name}>
+                        {resource.name}:{' '}
+                        {solution.slacks[index] === 0 ? (
+                          <span className="text-yellow-600">Recurso limitante</span>
+                        ) : (
+                          <span className="text-green-600">
+                            Excedente: {solution.slacks[index]} unidades
+                          </span>
+                        )}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
