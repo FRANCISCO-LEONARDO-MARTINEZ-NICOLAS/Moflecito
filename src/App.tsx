@@ -21,28 +21,28 @@ interface Solution {
   dualPrices: number[];
 }
 
-// Simplex method implementation
+// Implementación del método Simplex
 function simplexMethod(
   profits: number[],
   constraints: number[][],
   availabilities: number[]
 ): Solution {
-  // This is a simplified implementation for this specific 3x3 problem
-  // In a real production environment, we would use a more robust LP solver
+  // Esta es una implementación simplificada para este problema específico 3x3
+  // En un entorno de producción real, usaríamos un solucionador de PL más robusto
   
-  // Try all possible basic feasible solutions and find the optimal one
+  // Probar todas las posibles soluciones básicas factibles y encontrar la óptima
   const solutions: number[][] = [
-    [0, 0, 0],  // Zero production
-    [20, 0, 80], // Current optimal solution
-    [0, 0, 133.33], // Alternative solution
-    [50, 0, 0],  // Another possible solution
+    [0, 0, 0],  // Producción cero
+    [20, 0, 80], // Solución óptima actual
+    [0, 0, 133.33], // Solución alternativa
+    [50, 0, 0],  // Otra posible solución
   ];
 
   let bestValue = -Infinity;
   let bestSolution: number[] = [0, 0, 0];
   
   for (const solution of solutions) {
-    // Check if solution is feasible
+    // Verificar si la solución es factible
     let feasible = true;
     for (let i = 0; i < constraints.length; i++) {
       let sum = 0;
@@ -56,7 +56,7 @@ function simplexMethod(
     }
     
     if (feasible) {
-      // Calculate objective value
+      // Calcular el valor objetivo
       let value = 0;
       for (let i = 0; i < solution.length; i++) {
         value += solution[i] * profits[i];
@@ -69,7 +69,7 @@ function simplexMethod(
     }
   }
 
-  // Calculate slacks
+  // Calcular holguras
   const slacks = availabilities.map((avail, i) => {
     let used = 0;
     for (let j = 0; j < bestSolution.length; j++) {
@@ -78,7 +78,7 @@ function simplexMethod(
     return avail - used;
   });
 
-  // For this example, we'll use fixed dual prices based on the known solution
+  // Para este ejemplo, usaremos precios duales fijos basados en la solución conocida
   const dualPrices = [20, 0, 20];
 
   return {
